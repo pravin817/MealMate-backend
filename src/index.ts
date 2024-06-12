@@ -4,6 +4,8 @@ import "dotenv/config";
 import mongoose from "mongoose";
 import morgan from "morgan";
 import myUserRoute from "./routes/MyUserRoute";
+import { v2 as cloudinary } from "cloudinary";
+import myRestaurantRoute from "./routes/MyRestaurantRoute";
 
 // Connect with the database
 mongoose
@@ -14,6 +16,13 @@ mongoose
   .catch((error) => {
     console.log("Error connecting to the database", error);
   });
+
+// Cloudinary configuration
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 const app = express();
 app.use(express.json());
@@ -26,6 +35,7 @@ app.get("/health", async (req: Request, res: Response) => {
 });
 
 app.use("/api/my/user", myUserRoute);
+app.use("/api/my/restaurant", myRestaurantRoute);
 
 // Listen
 app.listen(8080, () => {
