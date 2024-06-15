@@ -2,6 +2,70 @@ import { Request, Response } from "express";
 import cloudinary from "cloudinary";
 import Restaurant from "../models/restaurant";
 import mongoose from "mongoose";
+import Order from "../models/order";
+
+const getMyRestaurantOrder = async (req: Request, res: Response) => {
+  try {
+    const restaurant = await Restaurant.findOne({ user: req.userId });
+
+    if (!restaurant) {
+      return res.status(404).json({
+        message: "User restaurant not found",
+      });
+    }
+
+    const orders = await Order.find({ restaurant: restaurant._id })
+      .populate("restaurant")
+      .populate("user");
+
+    if (!orders) {
+      return res.status(404).json({
+        message: "User restaurant orders not found",
+      });
+    }
+
+    res.status(200).json(orders);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      message: "Error while getting the user restaurant order",
+    });
+  }
+};
+
+const updateOrderStatus = async (req: Request, res: Response) => {
+  try {
+    const { orderId } = req.params;
+    const { status } = req.body;
+
+    const order = await Order.findById(orderId);
+
+    if (!order) {
+      return res.status(404).json({
+        message: "Order not found",
+      });
+    }
+
+    const restaurant = await Restaurant.findOne({ user: req.userId });
+
+    // Check if the restaurant is belong to the user that want to make the change in the order
+    if (restaurant?.user?._id.toString() !== req.userId) {
+      return res.status(401).json({
+        message: "User not authorized to update the order status",
+      });
+    }
+
+    order.status = status;
+    await order.save();
+
+    res.status(200).json(order);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      message: "Error occured while updating the user order status",
+    });
+  }
+};
 
 const getMyRestaurant = async (req: Request, res: Response) => {
   try {
@@ -101,6 +165,8 @@ const uploadFile = async (file: Express.Multer.File) => {
 };
 
 export default {
+  updateOrderStatus,
+  getMyRestaurantOrder,
   getMyRestaurant,
   createMyRestaurant,
   updateMyRestaurant,
