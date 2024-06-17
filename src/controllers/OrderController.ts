@@ -69,7 +69,21 @@ const stripeWebhookHandler = async (req: Request, res: Response) => {
       });
     }
 
-    order.totalAmount = event.data.object.amount_total;
+    if (
+      event.data.object.amount_total === null ||
+      event.data.object.amount_total === undefined
+    ) {
+      console.log(
+        `Amount total is missing for order ID ${event.data.object.metadata?.orderId}`
+      );
+      return res.status(400).json({
+        message: "Amount total is missing in the event data",
+      });
+    }
+
+    order.totalAmount = (event.data.object.amount_total as number) / 100; // Convert to INR
+
+    console.table([order.totalAmount, event.data.object.amount_total]);
     order.status = "paid";
 
     await order.save();
@@ -152,7 +166,7 @@ const createLineItems = (
     const line_item: Stripe.Checkout.SessionCreateParams.LineItem = {
       price_data: {
         currency: "inr",
-        unit_amount: menuItem.price,
+        unit_amount: menuItem.price * 100, // Convert rupees to paise
         product_data: {
           name: menuItem.name,
         },
@@ -180,7 +194,7 @@ const createSession = async (
           display_name: "Delivery",
           type: "fixed_amount",
           fixed_amount: {
-            amount: deliveryPrice,
+            amount: deliveryPrice * 100, // Convert rupees to paise
             currency: "inr",
           },
         },
@@ -191,7 +205,6 @@ const createSession = async (
       orderId,
       restaurantId,
     },
-
     success_url: `${FRONTEND_URL}/order-status?success=true`,
     cancel_url: `${FRONTEND_URL}/detail/${restaurantId}?cancelled=true`,
   });
